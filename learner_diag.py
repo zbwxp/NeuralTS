@@ -44,7 +44,13 @@ class NeuralTSDiag:
         self.U += g_list[arm] * g_list[arm]
         return arm, g_list[arm].norm().item(), 0, 0
     
-    def train(self, context, reward, lr=1e-2, epoch=100):
+    def train(self, context, reward, lr=1e-2, epoch=100, init=False):
+        if init:
+            self.func.fc1.weight.data = torch.randn_like(self.func.fc1.weight.data) * 0.01
+            self.func.fc1.bias.data = torch.zeros_like(self.func.fc1.bias.data)
+            self.func.fc2.weight.data = torch.randn_like(self.func.fc2.weight.data) * 0.01
+            self.func.fc2.bias.data = torch.zeros_like(self.func.fc2.bias.data)
+
         self.len += 1
         optimizer = optim.SGD(self.func.parameters(), lr=lr, weight_decay=self.lamdba / self.len)
         if self.context_list is None:

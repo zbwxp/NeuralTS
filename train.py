@@ -48,7 +48,7 @@ if __name__ == '__main__':
     parser.add_argument('--custom', type=bool, default=False, help='input the info of the custom dataset')
     parser.add_argument('--X_path', type=str, default='', help='path to the X dataset')
     parser.add_argument('--y_path', type=str, default='', help='path to the y dataset')
-    parser.add_argument('--floatrwd', type=bool, default=True, help='use float reward or one hot reward')
+    parser.add_argument('--floatrwd', type=bool, default=False, help='use float reward or one hot reward')
     parser.add_argument('--lr', type=float, default=1e-2, help='learning rate')
     parser.add_argument('--epochs', type=int, default=100, help='epoch for training')
 
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     accumulated_regret_5 = []
     accumulated_regret_6 = []
 
-
+    dist = []
 
     for t in range(min(args.size, b.size)):
         context, rwd = b.step(float_reward=args.floatrwd)
@@ -151,50 +151,69 @@ if __name__ == '__main__':
         accumulated_regret_6.append(np.sum(regrets_6))
 
 
-        loss = l.train(context[arm_select], r, lr=args.lr, epoch=args.epochs)
+        # covert r to one hot of largest value
+        r = 1 if np.argmax(rwd) == arm_select else 0
+        if t % 2 == 0:
+            init = False
+            # if t>200 and t%200 == 0 and t < 1300:
+            #     l.context_list = l.context_list[-1:]
+            #     l.reward = l.reward[-1:]
+            #     init = True
+            loss = l.train(context[arm_select], r, lr=args.lr, epoch=args.epochs)
         regrets.append(reg)
         if t % 100 == 0:
             print('{}: {:.3f}, {:.3e}, {:.3e}, {:.3e}, {:.3e}'.format(t, np.sum(regrets), loss, nrm, sig, ave_rwd))
 
         accumulated_regret.append(np.sum(regrets))
         # plot all the accumulated regrets
-        if t == 399:
+        if t == b.size - 1:
             import matplotlib.pyplot as plt
             # Assuming accumulated_regret and accumulated_regret_0 to accumulated_regret_6 are defined somewhere above this
-            arr = np.array(accumulated_regret)  # Convert the list to a numpy array
-            arr_0 = np.array(accumulated_regret_0)
-            arr_1 = np.array(accumulated_regret_1)
-            arr_2 = np.array(accumulated_regret_2)
-            arr_3 = np.array(accumulated_regret_3)
-            arr_4 = np.array(accumulated_regret_4)
-            arr_5 = np.array(accumulated_regret_5)
-            arr_6 = np.array(accumulated_regret_6)
+            arr = np.array(accumulated_regret)[:]   # Convert the list to a numpy array
+            arr_0 = np.array(accumulated_regret_0)[:]  
+            arr_1 = np.array(accumulated_regret_1)[:]  
+            arr_2 = np.array(accumulated_regret_2)[:]  
+            arr_3 = np.array(accumulated_regret_3)[:]  
+            arr_4 = np.array(accumulated_regret_4)[:]  
+            arr_5 = np.array(accumulated_regret_5)[:]  
+            arr_6 = np.array(accumulated_regret_6)[:]  
 
             plt.figure(figsize=(10, 6))  # Size of the figure
 
             # Define colors for clarity
             colors = ['blue', 'green', 'orange', 'purple', 'red', 'brown', 'pink', 'grey']
 
+            x_cord = np.arange(len(arr))
+
             # Plotting each array with a marker, each with its unique label and color
-            plt.plot(np.arange(len(arr)), arr, label='Neural TS', marker='o', color=colors[0])
-            plt.plot(np.arange(len(arr_0)), arr_0, label='Regret 0', marker='o', color=colors[1])
-            plt.plot(np.arange(len(arr_1)), arr_1, label='Regret 1', marker='o', color=colors[2])
-            plt.plot(np.arange(len(arr_2)), arr_2, label='Regret 2', marker='o', color=colors[3])
-            plt.plot(np.arange(len(arr_3)), arr_3, label='Regret 3', marker='o', color=colors[4])
-            plt.plot(np.arange(len(arr_4)), arr_4, label='Regret 4', marker='o', color=colors[5])
-            plt.plot(np.arange(len(arr_5)), arr_5, label='Regret 5', marker='o', color=colors[6])
-            plt.plot(np.arange(len(arr_6)), arr_6, label='Regret 6', marker='o', color=colors[7])
+            plt.plot(x_cord, arr, label='QBER', color=colors[0], linewidth=3, markersize=0.3)
+            # plt.plot(np.arange(len(arr_0)), arr_0, label='Regret gpt3.5', marker='o', color=colors[1], linewidth=0.2, markersize=0.3)
+            # plt.plot(np.arange(len(arr_1)), arr_1, label='Regret gpt4', marker='o', color=colors[2], linewidth=0.2, markersize=0.3)
+            # plt.plot(np.arange(len(arr_2)), arr_2, label='Regret Opus', marker='o', color=colors[3], linewidth=0.2, markersize=0.3)
+            # plt.plot(np.arange(len(arr_3)), arr_3, label='Regret Sonnet', marker='o', color=colors[4], linewidth=0.2, markersize=0.3)
+            # plt.plot(np.arange(len(arr_4)), arr_4, label='Regret Haiku', marker='o', color=colors[5], linewidth=0.2, markersize=0.3)
+            # plt.plot(np.arange(len(arr_5)), arr_5, label='Regret Qwen', marker='o', color=colors[6], linewidth=0.2, markersize=0.3)
+            # plt.plot(np.arange(len(arr_6)), arr_6, label='Regret Starling', marker='o', color=colors[7], linewidth=0.2, markersize=0.3)
 
+            plt.plot(x_cord, arr_0, label='GPT3.5', color=colors[1], linewidth=1, markersize=0.3)
+            plt.plot(x_cord, arr_1, label='GPT4', color=colors[2], linewidth=1, markersize=0.3)
+            plt.plot(x_cord, arr_2, label='Opus',  color=colors[3], linewidth=1, markersize=0.3)
+            plt.plot(x_cord, arr_3, label='Sonnet',  color=colors[4], linewidth=1, markersize=0.3)
+            plt.plot(x_cord, arr_4, label='Haiku',  color=colors[5], linewidth=1, markersize=0.3)
+            plt.plot(x_cord, arr_5, label='Qwen',  color=colors[6], linewidth=1, markersize=0.3)
+            plt.plot(x_cord, arr_6, label='Starling',  color=colors[7], linewidth=1, markersize=0.3)
             # Adding a line from (0,0) to (len(arr)-1, max(arr)) with linestyle '--', in red, and with a specific label
-            plt.plot([0, len(arr)-1], [0, max(arr)], label='Trend line', linestyle='--', color='red')
+            # plt.plot([0, len(arr)-1], [0, max(arr)], label='Trend line', linestyle='--', color='red')
 
-            plt.title('Array Visualization with Line')
-            plt.xlabel('Index')
-            plt.ylabel('Value')
+            # plt.title('Regret VS Iterations', fontsize=20)
+            # plt.xlabel('Steps', fontsize=14)
+            # plt.ylabel('Accumulative Regret', fontsize=14)
 
             # Adding the legend outside the plot area
-            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-
+            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=12)
+            plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+            plt.rcParams['xtick.labelsize'] = 20
+            plt.rcParams['ytick.labelsize'] = 20
             plt.tight_layout()  # Adjust the layout to make room for the legend
             fig_name = f'{args.dataset}_{args.learner}_{args.inv}_{args.style}_{args.lamdba}_{args.nu}_{args.hidden}_{args.lr}_{args.epochs}.png'
             plt.savefig(fig_name)

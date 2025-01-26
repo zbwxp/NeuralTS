@@ -45,54 +45,34 @@ def main():
     qa_data = qa_data[true_index]
     X = scores * 10
 
+    
+    
+    
+    
     # Step 1: Cluster your data
+    
+    
     n_clusters = 200  # You may need to adjust this value
     kmeans = KMeans(n_clusters=n_clusters, random_state=42)
     cluster_labels = kmeans.fit_predict(X)
 
     # Step 2 & 3: Calculate the average distance to the cluster centers and rank clusters
-    avg_distances = []
+    keep_indices = []
     for i in range(n_clusters):
         cluster_points_indices = np.where(cluster_labels == i)[0]  # Indices of points in cluster i
         cluster_points = X[cluster_points_indices]
         if len(cluster_points) == 0:
             continue  # Skip empty clusters
         _, distances = pairwise_distances_argmin_min(cluster_points, kmeans.cluster_centers_[i].reshape(1, -1))
-        avg_distance = np.mean(distances)
-        avg_distances.append((i, avg_distance, cluster_points_indices.shape, cluster_points_indices))
-
-    # Sort clusters by their average distances (ascending order)
-    sorted_clusters_by_distance = sorted(avg_distances, key=lambda x: x[1])
-
-    # Step 4: Select approximately 400 vectors & their indices from the closest clusters
-    selected_vectors = []
-    selected_indices = []
-    for cluster_id, _, _, indices in sorted_clusters_by_distance:
-        cluster_points = embeddings[indices]
-        selected_vectors.extend(cluster_points)
-        selected_indices.extend(indices)
-        if len(selected_vectors) >= 1500:
-            break
+        # only keep the first 25% closet points and keep its index
+        index, value = zip(*sorted(enumerate(distances), key=lambda x: x[1]))
+        cluster_points_indices = cluster_points_indices[list(index[:int(len(index)*0.25)])]
+        keep_indices.extend(cluster_points_indices)
 
 
-    # Convert to a numpy array for consistency
-    selected_vectors = np.array(selected_vectors)
-    selected_indices = np.array(selected_indices)
-
-    selected_scores = scores[selected_indices]
-
-    print(selected_vectors.shape)
-    plot_tsne_and_save(selected_vectors, filename='tmp1.jpg')
 
 
-    save_path = "/home/bowen/dataset/wild_arena/gemini_judge_full_selected1.npz"
 
-    new_data = {
-        'selected_vectors': selected_vectors,
-        'selected_scores': selected_scores,
-    }
-
-    np.savez(save_path, **new_data)
 
 
 
